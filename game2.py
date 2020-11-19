@@ -4,7 +4,7 @@ import pygame as pg
 
 
 CAPTION = "Scrolling Background"
-SCREEN_SIZE = (500, 500)
+SCREEN_SIZE = (1280, 700)
 
 
 DIRECT_DICT = {pg.K_UP: (0, -1),
@@ -60,10 +60,10 @@ class Player(object):
         """
         test_offset = list(self.rect.topleft)
         test_offset[index] += move[index]
-        while level_mask.overlap_area(self.mask, test_offset):
-            move[index] += (1 if move[index] < 0 else -1)
-            test_offset = list(self.rect.topleft)
-            test_offset[index] += move[index]
+        # while level_mask.overlap_area(self.mask, test_offset):
+        #     move[index] += (1 if move[index] < 0 else -1)
+        #     test_offset = list(self.rect.topleft)
+        #     test_offset[index] += move[index]
         return move[index]
 
     def draw(self, surface):
@@ -113,7 +113,7 @@ class Level(object):
         """
         new_image = self.image.copy()
         self.player.draw(new_image)
-        surface.fill((50, 255, 50))
+        # surface.fill((50, 255, 50))
         surface.blit(new_image, (0, 0), self.viewport)
 
 
@@ -169,8 +169,8 @@ def main():
     pg.init()
     pg.display.set_caption(CAPTION)
     pg.display.set_mode(SCREEN_SIZE)
-    PLAY_IMAGE = pg.image.load("smallface.png").convert_alpha()
-    POND_IMAGE = pg.image.load("pond.png").convert_alpha()
+    PLAY_IMAGE = pg.image.load("car2.png").convert_alpha()
+    POND_IMAGE = pg.image.load("map2.png").convert_alpha()
     Control().main_loop()
     pg.quit()
     sys.exit()

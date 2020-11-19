@@ -9,7 +9,7 @@ SCREEN_SIZE = (1280, 720)
 
 
 class Car(object):
-    def __init__(self, CAR_IMAGE, x, y, angle=-90.0, length=4):
+    def __init__(self, CAR_IMAGE, x, y, angle=-90.0, length=2):
         self.image = CAR_IMAGE
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect(center=(0, 0))
@@ -29,35 +29,27 @@ class Car(object):
         self.position += self.velocity.rotate(-self.angle) * dt
         self.angle += degrees(angular_velocity) * dt
 
-    def draw(self, surface):
-        rotated = pygame.transform.rotate(CAR_IMAGE, self.angle)
-        rect = rotated.get_rect()
-        self.rect = rect
-        surface.blit(rotated, self.position - (rect.width / 2, rect.height/2))
-        pygame.display.flip()
-
 
 class Map(object):
-    def __init__(self, map_image, viewport, car):
+    def __init__(self, map_image, car):
         self.image = map_image
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.car = car
         self.car.rect.center = self.rect.center
-        self.viewport = viewport
 
     def update(self, dt):
         self.car.update(dt)
-        self.update_viewport()
-
-    def update_viewport(self):
-        self.viewport.center = self.car.rect.center
-        self.viewport.clamp_ip(self.rect)
 
     def draw(self, surface):
         new_image = self.image.copy()
-        self.car.draw(new_image)
-        surface.blit(new_image, (0, 0), self.viewport)
+        surface.blit(new_image, (0, 0))
+        rotated = pygame.transform.rotate(self.car.image, self.car.angle)
+        rect = rotated.get_rect()
+        self.car.rect = rect
+        surface.blit(rotated, self.car.position -
+                     (rect.width / 2, rect.height/2))
+        pygame.display.flip()
 
 
 class Control(object):
@@ -65,11 +57,11 @@ class Control(object):
         self.screen = pygame.display.get_surface()
         self.screen_rect = self.screen.get_rect()
         self.clock = pygame.time.Clock()
-        self.fps = 20.0
+        self.fps = 60.0
         self.keys = pygame.key.get_pressed()
         self.done = False
         self.car = Car(CAR_IMAGE, 0, 0)
-        self.map = Map(MAP_IMAGE, self.screen_rect.copy(), self.car)
+        self.map = Map(MAP_IMAGE, self.car)
 
     def event_loop(self):
         for event in pygame.event.get():
@@ -77,16 +69,16 @@ class Control(object):
             if event.type == pygame.QUIT or self.keys[pygame.K_ESCAPE]:
                 self.done = True
             if self.keys[pygame.K_w]:
-                self.car.velocity.x = 100
+                self.car.velocity.x = 60
             elif self.keys[pygame.K_s]:
-                self.car.velocity.x = -100
+                self.car.velocity.x = -60
             else:
                 self.car.velocity.x = 0
 
             if self.keys[pygame.K_d]:
-                self.car.steering = -10
+                self.car.steering = -4
             elif self.keys[pygame.K_a]:
-                self.car.steering = 10
+                self.car.steering = 4
             else:
                 self.car.steering = 0
 
@@ -118,8 +110,8 @@ def main():
     pygame.init()
     pygame.display.set_caption("car")
     pygame.display.set_mode(SCREEN_SIZE)
-    CAR_IMAGE = pygame.image.load("car2.png").convert_alpha()
-    MAP_IMAGE = pygame.image.load("map.png").convert_alpha()
+    CAR_IMAGE = pygame.image.load("car.png").convert_alpha()
+    MAP_IMAGE = pygame.image.load("map2.png").convert_alpha()
     Control().main_loop()
     pygame.quit()
     sys.exit()
