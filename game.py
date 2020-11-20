@@ -120,7 +120,6 @@ def main():
     ROAD_IMAGE = pygame.image.load("road1084x720.png").convert_alpha()
     Control().main_loop()
     pygame.quit()
-    sys.exit()
 
 
 if __name__ == "__main__":
