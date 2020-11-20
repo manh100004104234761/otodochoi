@@ -5,12 +5,13 @@ from math import sin, radians, degrees, copysign
 from pygame.math import Vector2
 
 CAPTION = "Hello word"
-SCREEN_SIZE = (1280, 720)
+SCREEN_SIZE = (1084, 720)
 
 
 class Car(object):
-    def __init__(self, CAR_IMAGE, x, y, angle=-90.0, length=2):
+    def __init__(self, CAR_IMAGE, ROAD_IMAGE, x, y, angle=-90.0, length=2):
         self.image = CAR_IMAGE
+        self.road = ROAD_IMAGE
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect(center=(0, 0))
         self.position = Vector2(x, y)
@@ -26,8 +27,12 @@ class Car(object):
         else:
             angular_velocity = 0
         self.rect.center = self.position
-        self.position += self.velocity.rotate(-self.angle) * dt
-        self.angle += degrees(angular_velocity) * dt
+        next_position = self.position + self.velocity.rotate(-self.angle) * dt
+        if self.road.get_at((int(next_position[0]), int(next_position[1]))) == (0, 0, 0, 255):
+            self.position = next_position
+            self.angle += degrees(angular_velocity) * dt
+        else:
+            return
 
 
 class Map(object):
@@ -60,7 +65,7 @@ class Control(object):
         self.fps = 60.0
         self.keys = pygame.key.get_pressed()
         self.done = False
-        self.car = Car(CAR_IMAGE, 0, 0)
+        self.car = Car(CAR_IMAGE, ROAD_IMAGE, 24, 1)
         self.map = Map(MAP_IMAGE, self.car)
 
     def event_loop(self):
@@ -106,12 +111,13 @@ class Control(object):
 
 
 def main():
-    global MAP_IMAGE, CAR_IMAGE
+    global MAP_IMAGE, CAR_IMAGE, ROAD_IMAGE
     pygame.init()
     pygame.display.set_caption("car")
     pygame.display.set_mode(SCREEN_SIZE)
-    CAR_IMAGE = pygame.image.load("car.png").convert_alpha()
-    MAP_IMAGE = pygame.image.load("map2.png").convert_alpha()
+    CAR_IMAGE = pygame.image.load("car32x16.png").convert_alpha()
+    MAP_IMAGE = pygame.image.load("map1084x720.png").convert_alpha()
+    ROAD_IMAGE = pygame.image.load("road1084x720.png").convert_alpha()
     Control().main_loop()
     pygame.quit()
     sys.exit()
