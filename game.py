@@ -4,8 +4,9 @@ import pygame
 from math import sin, radians, degrees, copysign
 from pygame.math import Vector2
 
-CAPTION = "Hello word"
+CAPTION = "Hello world"
 SCREEN_SIZE = (1084, 720)
+destination = (-100, -100)
 
 
 class Car(object):
@@ -42,6 +43,7 @@ class Map(object):
         self.rect = self.image.get_rect()
         self.car = car
         self.car.rect.center = self.rect.center
+        self.finished_flag = pygame.image.load("flag.png").convert_alpha()
 
     def update(self, dt):
         self.car.update(dt)
@@ -54,6 +56,8 @@ class Map(object):
         self.car.rect = rect
         surface.blit(rotated, self.car.position -
                      (rect.width / 2, rect.height/2))
+        surface.blit(self.finished_flag,
+                     (destination[0] - 32, destination[1] - 27))
         pygame.display.flip()
 
 
@@ -65,27 +69,45 @@ class Control(object):
         self.fps = 60.0
         self.keys = pygame.key.get_pressed()
         self.done = False
-        self.car = Car(CAR_IMAGE, ROAD_IMAGE, 24, 1)
+        self.car = Car(CAR_IMAGE, ROAD_IMAGE, 0, 0)
         self.map = Map(MAP_IMAGE, self.car)
+        self.count_clicked = 0
+        self.ready = False
 
     def event_loop(self):
+        global destination
         for event in pygame.event.get():
-            self.keys = pygame.key.get_pressed()
-            if event.type == pygame.QUIT or self.keys[pygame.K_ESCAPE]:
-                self.done = True
-            if self.keys[pygame.K_w]:
-                self.car.velocity.x = 60
-            elif self.keys[pygame.K_s]:
-                self.car.velocity.x = -60
-            else:
-                self.car.velocity.x = 0
+            if (self.ready):
+                self.keys = pygame.key.get_pressed()
+                if event.type == pygame.QUIT or self.keys[pygame.K_ESCAPE]:
+                    self.done = True
+                if self.keys[pygame.K_r]:
+                    self.count_clicked = 0
+                    self.ready = False
+                if self.keys[pygame.K_w]:
+                    self.car.velocity.x = 60
+                elif self.keys[pygame.K_s]:
+                    self.car.velocity.x = -60
+                else:
+                    self.car.velocity.x = 0
 
-            if self.keys[pygame.K_d]:
-                self.car.steering = -4
-            elif self.keys[pygame.K_a]:
-                self.car.steering = 4
+                if self.keys[pygame.K_d]:
+                    self.car.steering = -4
+                elif self.keys[pygame.K_a]:
+                    self.car.steering = 4
+                else:
+                    self.car.steering = 0
             else:
-                self.car.steering = 0
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    pos = pygame.mouse.get_pos()
+                    print(pos)
+                    self.count_clicked += 1
+                    if (self.count_clicked == 1):
+                        self.car = Car(CAR_IMAGE, ROAD_IMAGE, pos[0], pos[1])
+                        self.map = Map(MAP_IMAGE, self.car)
+                    if (self.count_clicked == 2):
+                        destination = pos
+                        self.ready = True
 
     def display_fps(self):
         caption = "{} - FPS: {:.2f}".format(CAPTION, self.clock.get_fps())
