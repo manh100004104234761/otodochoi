@@ -103,11 +103,20 @@ class Control(object):
                     print(pos)
                     self.count_clicked += 1
                     if (self.count_clicked == 1):
-                        self.car = Car(CAR_IMAGE, ROAD_IMAGE, pos[0], pos[1])
-                        self.map = Map(MAP_IMAGE, self.car)
+                        if (ROAD_IMAGE.get_at((int(pos[0]), int(pos[1]))) == (0, 0, 0, 255)):
+                            self.car = Car(
+                                CAR_IMAGE, ROAD_IMAGE, pos[0], pos[1])
+                            self.map = Map(MAP_IMAGE, self.car)
+                        else:
+                            print("not in road, pls click again")
+                            self.count_clicked -= 1
                     if (self.count_clicked == 2):
-                        destination = pos
-                        self.ready = True
+                        if (ROAD_IMAGE.get_at((int(pos[0]), int(pos[1]))) == (0, 0, 0, 255)):
+                            destination = pos
+                            self.ready = True
+                        else:
+                            print("not in road, pls click again")
+                            self.count_clicked -= 1
 
     def display_fps(self):
         caption = "{} - FPS: {:.2f}".format(CAPTION, self.clock.get_fps())
