@@ -3,6 +3,8 @@ import random
 import pygame
 from math import sin, radians, degrees, copysign, sqrt, ceil, asin, degrees, floor
 from pygame.math import Vector2
+import time
+
 
 CAPTION = "Hello world"
 SCREEN_SIZE = (1084, 720)
@@ -17,6 +19,15 @@ index_after = 0
 repos_before = False
 repos_after = False
 keep_turning = False
+
+red_values = [0, 1, 2, 3]
+yallow_values = [4,5]
+green_values = [6,7,8,9,10]
+
+POS_LIGHT = [(24,363),(24,593),(461,72),(461,363),(461,593),(895,72),(895,593)]
+# POS_LIGHT = [(24,363),(24,593)]
+
+
 def adjustAngle(angle):
     angle = int(angle)
     if angle >= 0:
@@ -237,6 +248,29 @@ def adjustPointToTheCenter(point_x, point_y):
         if point_y - min_distance == y or point_y + min_distance == y:
             return [point_x, y]
 
+class Traffic(object):
+    def __init__(self, x, y, red, yallow, green):
+        self.status = red
+        self.position = Vector2(x, y)
+        self.red = red
+        self.yallow = yallow
+        self.green = green
+        self.count = 0
+        self.color = (0, 0 ,0)
+    def update(self, seconds):
+        if seconds % 11 in red_values:
+            self.status = self.red
+            self.count = 4 - seconds % 11
+            self.color = (255, 0 ,0)
+        elif seconds % 11 in yallow_values:
+            self.status = self.yallow
+            self.count = 6 - seconds % 11
+            self.color = (255, 255 ,0)
+        elif seconds % 11 in green_values:
+            self.status = self.green
+            self.count = 11 - seconds % 11
+            self.color = (0, 255 ,0)
+
 class Car(object):
     def __init__(self, CAR_IMAGE, ROAD_IMAGE, x, y, angle=-90, length=16):
         self.image = CAR_IMAGE
@@ -267,12 +301,13 @@ class Car(object):
 
 
 class Map(object):
-    def __init__(self, map_image, car):
+    def __init__(self, map_image, car, traffics):
         self.image = map_image
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         self.car = car
         self.car.rect.center = self.rect.center
+        self.traffics = traffics
         self.finished_flag = pygame.image.load("flag.png").convert_alpha()
 
     def update(self, dt):
@@ -288,6 +323,10 @@ class Map(object):
                      (rect.width / 2, rect.height/2))
         surface.blit(self.finished_flag,
                      (dest_pos[0] - 32, dest_pos[1] - 27))
+        for i in self.traffics:
+            surface.blit(i.status, (i.position[0] - 32, i.position[1] - 27))
+            text = font.render(str(i.count), True, i.color)
+            surface.blit(text, (i.position[0] - 16, i.position[1] - 13))
         pygame.display.flip()
 
 
@@ -300,7 +339,10 @@ class Control(object):
         self.keys = pygame.key.get_pressed()
         self.done = False
         self.car = Car(CAR_IMAGE, ROAD_IMAGE, 24, 0)
-        self.map = Map(MAP_IMAGE, self.car)
+        self.traffics = []
+        for i in POS_LIGHT:
+            self.traffics.append(Traffic(i[0], i[1], RED, YALLOW, GREEN))
+        self.map = Map(MAP_IMAGE, self.car, self.traffics)
         self.count_clicked = 0
         self.ready = False
 
@@ -407,7 +449,7 @@ class Control(object):
                             start_pos = adjustPointToTheCenter(int(pos[0]), int(pos[1]))
                             self.car = Car(
                                 CAR_IMAGE, ROAD_IMAGE, start_pos[0], start_pos[1])
-                            self.map = Map(MAP_IMAGE, self.car)
+                            self.map = Map(MAP_IMAGE, self.car, self.traffics)
                         else:
                             print("not in road, pls click again")
                             self.count_clicked -= 1
@@ -427,7 +469,7 @@ class Control(object):
                             angle = findStartingAngle(path[0], path[1])
                             self.car = Car(
                                 CAR_IMAGE, ROAD_IMAGE, start_pos[0], start_pos[1], angle)
-                            self.map = Map(MAP_IMAGE, self.car)
+                            self.map = Map(MAP_IMAGE, self.car, self.traffics)
                             self.ready = True
                         else:
                             print("not in road, pls click again")
@@ -462,6 +504,8 @@ class Control(object):
                 expected_pos_after_turn = [int(path[path_current_index][0]), int(path[path_current_index][1] + (path[path_current_index + 1][1] - path[path_current_index][1])/abs((path[path_current_index + 1][1] - path[path_current_index][1]))*23)]
             else:
                 expected_pos_after_turn = [int(path[path_current_index][0] + (path[path_current_index + 1][0] - path[path_current_index][0])/abs((path[path_current_index + 1][0] - path[path_current_index][0]))*23), int(path[path_current_index][1])]
+        for i in self.traffics:
+            i.update(seconds)
         self.map.draw(self.screen)
 
     def main_loop(self):
@@ -474,7 +518,9 @@ class Control(object):
             self.display_fps()
 
     def auto_drive(self):
+        global seconds
         while True:
+            seconds = int(time.time())
             dt = self.clock.get_time() / 1000
             self.auto_drive_loop()
             self.update(dt)
@@ -483,13 +529,17 @@ class Control(object):
             self.display_fps()
 
 def main():
-    global MAP_IMAGE, CAR_IMAGE, ROAD_IMAGE
+    global MAP_IMAGE, CAR_IMAGE, ROAD_IMAGE, RED, YALLOW, GREEN, font
     pygame.init()
     pygame.display.set_caption("car")
     pygame.display.set_mode(SCREEN_SIZE)
     CAR_IMAGE = pygame.image.load("car32x16.png").convert_alpha()
     MAP_IMAGE = pygame.image.load("map1084x720.png").convert_alpha()
     ROAD_IMAGE = pygame.image.load("road1084x720.png").convert_alpha()
+    RED = pygame.image.load("0.png").convert_alpha()
+    YALLOW = pygame.image.load("1.png").convert_alpha()
+    GREEN = pygame.image.load("2.png").convert_alpha()
+    font = pygame.font.SysFont('arial', 50)
     #Control().main_loop()
     Control().auto_drive()
     pygame.quit()
