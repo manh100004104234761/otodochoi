@@ -19,14 +19,51 @@ index_after = 0
 repos_before = False
 repos_after = False
 keep_turning = False
+awareness = False
+light_aware_pos = [0, 0]
 
-red_values = [0, 1, 2, 3]
-yallow_values = [4,5]
-green_values = [6,7,8,9,10]
+red_values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+yellow_values = [11, 12, 13]
+green_values = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 POS_LIGHT = [(24,363),(24,593),(461,72),(461,363),(461,593),(895,72),(895,593)]
 # POS_LIGHT = [(24,363),(24,593)]
+light_pos = [[24, 363], [24, 593], [461, 72], [461, 363], [461, 593], [895, 72], [895, 593]]
 
+def findDistanceToLight(previousPoint, nextPoint):
+    newPoint = findLightAwarePoint(previousPoint, nextPoint)
+    if newPoint[0] == nextPoint[0]:
+        return int(abs(nextPoint[1] - newPoint[1]))
+    else:
+        return int(abs(nextPoint[0] - newPoint[0]))
+
+def findLightAwarePoint(previousPoint, nextPoint):
+    if previousPoint[0] == nextPoint[0]:
+        if previousPoint[1] < nextPoint[1]:
+            if previousPoint[1] + 90 >= nextPoint[1]:
+                return previousPoint
+            else:
+                newPoint = [nextPoint[0], nextPoint[1] - 90]
+                return newPoint
+        else:
+            if previousPoint[1] - 90 <= nextPoint[1]:
+                return previousPoint
+            else:
+                newPoint = [nextPoint[0], nextPoint[1] + 90]
+                return newPoint
+    else:
+        if previousPoint[0] < nextPoint[0]:
+            if previousPoint[0] + 90 >= nextPoint[0]:
+                return previousPoint
+            else:
+                newPoint = [nextPoint[0] - 90, nextPoint[1]]
+                return newPoint
+        else:
+            if previousPoint[0] - 90 <= nextPoint[0]:
+                return previousPoint
+            else:
+                newPoint = [nextPoint[0] - 90, nextPoint[1]]
+                return newPoint
 
 def adjustAngle(angle):
     angle = int(angle)
@@ -249,27 +286,30 @@ def adjustPointToTheCenter(point_x, point_y):
             return [point_x, y]
 
 class Traffic(object):
-    def __init__(self, x, y, red, yallow, green):
+    def __init__(self, x, y, red, yellow, green):
         self.status = red
         self.position = Vector2(x, y)
         self.red = red
-        self.yallow = yallow
+        self.yellow = yellow
         self.green = green
         self.count = 0
         self.color = (0, 0 ,0)
     def update(self, seconds):
-        if seconds % 11 in red_values:
+        if seconds % 25 in red_values:
             self.status = self.red
-            self.count = 4 - seconds % 11
+            self.count = 13 - seconds % 25
             self.color = (255, 0 ,0)
-        elif seconds % 11 in yallow_values:
-            self.status = self.yallow
-            self.count = 6 - seconds % 11
-            self.color = (255, 255 ,0)
-        elif seconds % 11 in green_values:
+        else: #seconds % 25 in green_values:
             self.status = self.green
-            self.count = 11 - seconds % 11
+            self.count = 25 - seconds % 25
             self.color = (0, 255 ,0)
+        '''
+        elif seconds % 25 in yellow_values:
+            self.status = self.yellow
+            self.count = 14 - seconds % 25
+            self.color = (255, 255 ,0)
+        '''
+
 
 class Car(object):
     def __init__(self, CAR_IMAGE, ROAD_IMAGE, x, y, angle=-90, length=16):
@@ -341,7 +381,7 @@ class Control(object):
         self.car = Car(CAR_IMAGE, ROAD_IMAGE, 24, 0)
         self.traffics = []
         for i in POS_LIGHT:
-            self.traffics.append(Traffic(i[0], i[1], RED, YALLOW, GREEN))
+            self.traffics.append(Traffic(i[0], i[1], RED, YELLOW, GREEN))
         self.map = Map(MAP_IMAGE, self.car, self.traffics)
         self.count_clicked = 0
         self.ready = False
@@ -391,10 +431,36 @@ class Control(object):
                             self.count_clicked -= 1
 
     def auto_drive_loop(self):
-        global dest_pos, start_pos, path, path_current_index, expected_pos_before_turn, expected_pos_after_turn, repos_before, repos_after, keep_turning, index_before, index_after
+        global dest_pos, start_pos, path, path_current_index, expected_pos_before_turn, expected_pos_after_turn, repos_before, repos_after, keep_turning, index_before, index_after, awareness, light_aware_pos
         if (self.ready):
             #print([expected_pos_before_turn, expected_pos_after_turn, self.car.position])
+            if path[path_current_index] in light_pos and awareness == False and (int(ceil(self.car.position[0])) == light_aware_pos[0] and int(ceil(self.car.position[1])) == light_aware_pos[1] or int(ceil(self.car.position[0])) == light_aware_pos[0] and int(floor(self.car.position[1])) == light_aware_pos[1] or int(floor(self.car.position[0])) == light_aware_pos[0] and int(ceil(self.car.position[1])) == light_aware_pos[1] or int(floor(self.car.position[0])) == light_aware_pos[0] and int(floor(self.car.position[1])) == light_aware_pos[1]):
+                awareness = True
+                light_distance = findDistanceToLight(path[path_current_index - 1], path[path_current_index])
+                for traffic in self.traffics:
+                    if traffic.position[0] == path[path_current_index][0] and traffic.position[1] == path[path_current_index][1]:
+                        if traffic.status == RED:
+                            if int(traffic.count) * 50 < light_distance:
+                                self.car.velocity.x = 50
+                            else:
+                                self.car.velocity.x = 30
+                        else:
+                            if int(traffic.count) * 50 > light_distance:
+                                self.car.velocity.x = 50
+                            elif int(traffic.count) * 100 > light_distance:
+                                self.car.velocity.x = 100
+                            else:
+                                self.car.velocity.x = 30
+            if awareness:
+                current_velocity = self.car.velocity.x
+                self.car.velocity.x = current_velocity
             if int(ceil(self.car.position[0])) == expected_pos_before_turn[0] and int(ceil(self.car.position[1])) == expected_pos_before_turn[1] or int(ceil(self.car.position[0])) == expected_pos_before_turn[0] and int(floor(self.car.position[1])) == expected_pos_before_turn[1] or int(floor(self.car.position[0])) == expected_pos_before_turn[0] and int(ceil(self.car.position[1])) == expected_pos_before_turn[1] or int(floor(self.car.position[0])) == expected_pos_before_turn[0] and int(floor(self.car.position[1])) == expected_pos_before_turn[1]:
+                for traffic in self.traffics:
+                    if traffic.position[0] == path[path_current_index][0] and traffic.position[1] == path[path_current_index][1]:
+                        if traffic.status == RED:
+                            self.car.velocity.x = 0
+                            return
+                awareness = False
                 if index_before < path_current_index:
                     if path_current_index == len(path):
                         self.car.velocity.x = 0
@@ -406,13 +472,9 @@ class Control(object):
                             keep_turning = True
                             self.car.velocity.x = 50
                             if isPositiveTurn(expected_pos_before_turn, path[path_current_index], path[path_current_index + 1]):
-                                print("Positive")
                                 self.car.steering = degrees(asin(self.car.length/23.0))
-                                #print(degrees(asin(self.car.length/23.0)))
                             else:
                                 self.car.steering = -degrees(asin(self.car.length/23.0))
-                                print("Negative")
-                                #print(degrees(asin(self.car.length/23.0)))
                         else:
                             self.car.velocity.x = 50
             elif keep_turning:
@@ -423,22 +485,34 @@ class Control(object):
                     self.car.velocity.x = 50
                     self.car.steering = -degrees(asin(self.car.length/23.0))
             else:
-                self.car.velocity.x = 50
+                if self.car.velocity.x == 0:
+                    self.car.velocity.x = 50
+                else:
+                    current_velocity = self.car.velocity.x
+                    self.car.velocity.x = current_velocity
             if int(floor(self.car.position[0])) == expected_pos_after_turn[0] and int(floor(self.car.position[1])) == expected_pos_after_turn[1] or int(floor(self.car.position[0])) == expected_pos_after_turn[0] and int(ceil(self.car.position[1])) == expected_pos_after_turn[1] or int(ceil(self.car.position[0])) == expected_pos_after_turn[0] and int(floor(self.car.position[1])) == expected_pos_after_turn[1] or int(ceil(self.car.position[0])) == expected_pos_after_turn[0] and int(ceil(self.car.position[1])) == expected_pos_after_turn[1]:
                 if index_after == path_current_index:
                     repos_after = True
                     keep_turning = False
                     path_current_index += 1
+                    for traffic in self.traffics:
+                        if traffic.position[0] == path[path_current_index][0] and traffic.position[1] == path[path_current_index][1]:
+                            light_aware_pos = findLightAwarePoint(path[path_current_index - 1], path[path_current_index])
                     if path_current_index == len(path) - 1:
                         expected_pos_before_turn = path[path_current_index]
                     elif path[path_current_index][0] == path[path_current_index - 1][0]:
                         expected_pos_before_turn = [int(path[path_current_index][0]), int(path[path_current_index][1] - (path[path_current_index][1] - path[path_current_index - 1][1])/abs((path[path_current_index][1] - path[path_current_index - 1][1]))*23)]
                     else:
                         expected_pos_before_turn = [int(path[path_current_index][0] - (path[path_current_index][0] - path[path_current_index - 1][0])/abs((path[path_current_index][0] - path[path_current_index - 1][0]))*23), int(path[path_current_index][1])]
-                    print(expected_pos_before_turn)
-                    print(expected_pos_after_turn)
                     self.car.velocity.x = 50
                     self.car.steering = 0
+            '''
+            for traffic in self.traffics:
+                if traffic.position[0] == path[path_current_index][0] and traffic.position[1] == path[path_current_index][1]:
+                    if traffic.status == RED:
+                        self.car.velocity.x = 0
+                        break
+            '''
         else:
             for event in pygame.event.get():
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -462,11 +536,15 @@ class Control(object):
                             else:
                                 expected_pos_before_turn = [int(path[path_current_index + 1][0] - (path[path_current_index + 1][0] - path[path_current_index][0])/abs((path[path_current_index + 1][0] - path[path_current_index][0]))*23), int(path[path_current_index + 1][1])]
                             path_current_index += 1
+
                             if path[path_current_index + 1][0] == path[path_current_index][0]:
                                 expected_pos_after_turn = [int(path[path_current_index][0]), int(path[path_current_index][1] + (path[path_current_index + 1][1] - path[path_current_index][1])/abs((path[path_current_index + 1][1] - path[path_current_index][1]))*23)]
                             else:
                                 expected_pos_after_turn = [int(path[path_current_index][0] + (path[path_current_index + 1][0] - path[path_current_index][0])/abs((path[path_current_index + 1][0] - path[path_current_index][0]))*23), int(path[path_current_index][1])]
                             angle = findStartingAngle(path[0], path[1])
+                            for traffic in self.traffics:
+                                if traffic.position[0] == path[path_current_index][0] and traffic.position[1] == path[path_current_index][1]:
+                                    light_aware_pos = findLightAwarePoint(path[path_current_index - 1], path[path_current_index])
                             self.car = Car(
                                 CAR_IMAGE, ROAD_IMAGE, start_pos[0], start_pos[1], angle)
                             self.map = Map(MAP_IMAGE, self.car, self.traffics)
@@ -490,10 +568,8 @@ class Control(object):
         if repos_before:
             self.car.position = expected_pos_before_turn
             self.map.update(dt)
-            print(self.car.position)
             repos_before = False
         if repos_after:
-            print("update sau")
             self.car.position = expected_pos_after_turn
             self.car.angle = adjustAngle(self.car.angle)
             self.map.update(dt)
@@ -529,7 +605,7 @@ class Control(object):
             self.display_fps()
 
 def main():
-    global MAP_IMAGE, CAR_IMAGE, ROAD_IMAGE, RED, YALLOW, GREEN, font
+    global MAP_IMAGE, CAR_IMAGE, ROAD_IMAGE, RED, YELLOW, GREEN, font
     pygame.init()
     pygame.display.set_caption("car")
     pygame.display.set_mode(SCREEN_SIZE)
@@ -537,7 +613,7 @@ def main():
     MAP_IMAGE = pygame.image.load("map1084x720.png").convert_alpha()
     ROAD_IMAGE = pygame.image.load("road1084x720.png").convert_alpha()
     RED = pygame.image.load("0.png").convert_alpha()
-    YALLOW = pygame.image.load("1.png").convert_alpha()
+    YELLOW = pygame.image.load("1.png").convert_alpha()
     GREEN = pygame.image.load("2.png").convert_alpha()
     font = pygame.font.SysFont('arial', 50)
     #Control().main_loop()
