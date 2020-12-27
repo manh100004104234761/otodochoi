@@ -455,12 +455,12 @@ class Control(object):
                 current_velocity = self.car.velocity.x
                 self.car.velocity.x = current_velocity
             if int(ceil(self.car.position[0])) == expected_pos_before_turn[0] and int(ceil(self.car.position[1])) == expected_pos_before_turn[1] or int(ceil(self.car.position[0])) == expected_pos_before_turn[0] and int(floor(self.car.position[1])) == expected_pos_before_turn[1] or int(floor(self.car.position[0])) == expected_pos_before_turn[0] and int(ceil(self.car.position[1])) == expected_pos_before_turn[1] or int(floor(self.car.position[0])) == expected_pos_before_turn[0] and int(floor(self.car.position[1])) == expected_pos_before_turn[1]:
+                awareness = False
                 for traffic in self.traffics:
                     if traffic.position[0] == path[path_current_index][0] and traffic.position[1] == path[path_current_index][1]:
                         if traffic.status == RED:
                             self.car.velocity.x = 0
                             return
-                awareness = False
                 if index_before < path_current_index:
                     if path_current_index == len(path):
                         self.car.velocity.x = 0
